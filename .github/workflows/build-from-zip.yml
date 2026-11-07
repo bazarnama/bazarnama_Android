@@ -27,20 +27,43 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Find and prepare Android project
+        id: project
+        shell: bash
+        run: |
+          if [ -f "bazarnama-android-release-project.zip" ]; then
+            unzip -o "bazarnama-android-release-project.zip" -d .
+          fi
+
+          PROJECT_DIR=$(find . -type f \
+            \( -name settings.gradle -o -name settings.gradle.kts \) \
+            -not -path '*/.gradle/*' \
+            -print -quit | xargs -r dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Android Gradle project not found."
+            echo "Repository files:"
+            ls -la
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Found project: $PROJECT_DIR"
+
       - name: Build Android APK
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
 
       - name: Build Google Play AAB
-        run: gradle --no-daemon bundleRelease
+        run: gradle --no-daemon -p "$PROJECT_DIR" bundleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: bazarnama-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: '**/app/build/outputs/apk/debug/*.apk'
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: bazarnama-aab
-          path: app/build/outputs/bundle/release/*.aab
+          path: '**/app/build/outputs/bundle/release/*.aab'
