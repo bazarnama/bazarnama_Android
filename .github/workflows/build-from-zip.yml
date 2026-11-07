@@ -1,39 +1,46 @@
-name: Build Bazarnama Android Release APK
+
+name: Build Bazarnama Android
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check release project archive
-        run: test -f bazarnama-android-release-project.zip
-
-      - name: Extract Android project
-        run: unzip -oq bazarnama-android-release-project.zip -d .
-
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle 8.9
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
 
-      - name: Build release APK
-        run: gradle -p bazarnama-android --no-daemon assembleRelease
+      - name: Build Android APK
+        run: gradle --no-daemon assembleDebug
 
-      - name: Upload release APK
+      - name: Build Google Play AAB
+        run: gradle --no-daemon bundleRelease
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: bazarnama-android-release-apk
-          path: bazarnama-android/app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
-          retention-days: 14
+          name: bazarnama-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazarnama-aab
+          path: app/build/outputs/bundle/release/*.aab
